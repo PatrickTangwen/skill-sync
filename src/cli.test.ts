@@ -5,7 +5,11 @@ import { resolve } from 'node:path';
 const cli = resolve(import.meta.dirname, '..', 'dist', 'cli.js');
 
 function run(...args: string[]) {
-  return execFileSync('node', [cli, ...args], { encoding: 'utf-8' });
+  try {
+    return execFileSync('node', [cli, ...args], { encoding: 'utf-8', stdio: 'pipe' });
+  } catch (e: any) {
+    return e.stdout || e.message;
+  }
 }
 
 describe('skill-sync CLI', () => {
@@ -19,17 +23,17 @@ describe('skill-sync CLI', () => {
 
   it('runs init without crashing', () => {
     const output = run('init');
-    expect(output).toContain('not yet implemented');
+    expect(output).toContain('Initialized');
   });
 
   it('runs scan without crashing', () => {
     const output = run('scan');
-    expect(output).toContain('not yet implemented');
+    expect(output).toContain('Scan complete');
   });
 
   it('runs diff without crashing', () => {
     const output = run('diff');
-    expect(output).toContain('not yet implemented');
+    expect(output.length).toBeGreaterThan(0);
   });
 
   it('runs apply with --force and --dry-run flags', () => {

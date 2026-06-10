@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { runInit, runScan, runDiff } from './commands.js';
+
+const DEFAULT_BASE = join(homedir(), '.config', 'skill-sync');
 
 const program = new Command();
 
@@ -13,21 +18,25 @@ program
   .command('init')
   .description('Initialize the source of truth directory (~/.config/skill-sync/)')
   .action(() => {
-    console.log('skill-sync init: not yet implemented');
+    runInit(DEFAULT_BASE);
+    console.log('Initialized source of truth at', DEFAULT_BASE);
   });
 
 program
   .command('scan')
   .description('Scan current machine and generate/update inventory lists')
   .action(() => {
-    console.log('skill-sync scan: not yet implemented');
+    const summary = runScan(DEFAULT_BASE, homedir());
+    console.log('Scan complete:', summary);
   });
 
 program
   .command('diff')
   .description('Compare source of truth against current machine state')
   .action(() => {
-    console.log('skill-sync diff: not yet implemented');
+    const { output, hasDifferences } = runDiff(DEFAULT_BASE, homedir());
+    console.log(output);
+    process.exitCode = hasDifferences ? 1 : 0;
   });
 
 program

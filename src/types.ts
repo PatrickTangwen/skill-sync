@@ -52,3 +52,24 @@ export interface SourceOfTruth {
   hooks: HookEntry[];
   rules: RuleEntry[];
 }
+
+export interface InstructionDiff {
+  tool: 'claude' | 'codex';
+  status: 'identical' | 'modified' | 'missing' | 'source_missing';
+  patch: string | null;
+}
+
+export interface InventoryDiff<T> {
+  missing: T[];
+  extra: T[];
+  matched: T[];
+}
+
+export interface DiffResult {
+  instructions: InstructionDiff[];
+  mcpServers: InventoryDiff<McpServerEntry>;
+  plugins: InventoryDiff<PluginEntry>;
+  hooks: InventoryDiff<HookEntry>;
+  rules: InventoryDiff<RuleEntry>;
+  hasDifferences: boolean;
+}
