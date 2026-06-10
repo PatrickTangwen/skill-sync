@@ -1,0 +1,44 @@
+{
+  "name": "skill-sync",
+  "version": "0.1.0",
+  "description": "Sync AI CLI tool configurations across devices and tools",
+  "type": "module",
+  "bin": {
+    "skill-sync": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PatrickTangwen/skill-sync.git"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "sync",
+    "cli",
+    "configuration"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/PatrickTangwen/skill-sync/issues"
+  },
+  "homepage": "https://github.com/PatrickTangwen/skill-sync#readme",
+  "dependencies": {
+    "@iarna/toml": "^2.2.5",
+    "commander": "^15.0.0",
+    "diff": "^9.0.0",
+    "js-yaml": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/diff": "^7.0.2",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.9.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

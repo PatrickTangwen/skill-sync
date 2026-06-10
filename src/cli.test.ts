@@ -1,0 +1,40 @@
+import { describe, it, expect } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { resolve } from 'node:path';
+
+const cli = resolve(import.meta.dirname, '..', 'dist', 'cli.js');
+
+function run(...args: string[]) {
+  return execFileSync('node', [cli, ...args], { encoding: 'utf-8' });
+}
+
+describe('skill-sync CLI', () => {
+  it('prints help with all four subcommands', () => {
+    const output = run('--help');
+    expect(output).toContain('init');
+    expect(output).toContain('scan');
+    expect(output).toContain('diff');
+    expect(output).toContain('apply');
+  });
+
+  it('runs init without crashing', () => {
+    const output = run('init');
+    expect(output).toContain('not yet implemented');
+  });
+
+  it('runs scan without crashing', () => {
+    const output = run('scan');
+    expect(output).toContain('not yet implemented');
+  });
+
+  it('runs diff without crashing', () => {
+    const output = run('diff');
+    expect(output).toContain('not yet implemented');
+  });
+
+  it('runs apply with --force and --dry-run flags', () => {
+    const output = run('apply', '--force', '--dry-run');
+    expect(output).toContain('--force: enabled');
+    expect(output).toContain('--dry-run: enabled');
+  });
+});
