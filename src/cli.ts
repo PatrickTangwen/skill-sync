@@ -3,7 +3,7 @@
 import { Command } from 'commander';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { runInit, runScan, runDiff } from './commands.js';
+import { runInit, runScan, runDiff, runApply } from './commands.js';
 
 const DEFAULT_BASE = join(homedir(), '.config', 'skill-sync');
 
@@ -45,9 +45,12 @@ program
   .option('--force', 'Skip interactive confirmation')
   .option('--dry-run', 'Preview changes without writing to disk')
   .action((options) => {
-    console.log('skill-sync apply: not yet implemented');
-    if (options.force) console.log('  --force: enabled');
-    if (options.dryRun) console.log('  --dry-run: enabled');
+    const { output, exitCode } = runApply(DEFAULT_BASE, homedir(), {
+      dryRun: options.dryRun || false,
+      force: options.force || false,
+    });
+    console.log(output);
+    process.exitCode = exitCode;
   });
 
 program.parse();

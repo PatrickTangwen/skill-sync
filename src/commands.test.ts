@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { runInit, runScan, runDiff } from './commands.js';
+import { runInit, runScan, runDiff, runApply } from './commands.js';
 import { SourceStore } from './source-store.js';
 
 describe('runInit', () => {
@@ -160,5 +160,86 @@ describe('runDiff', () => {
 
     expect(result.output).toContain('scan');
     expect(result.hasDifferences).toBe(false);
+  });
+});
+
+describe('runApply', () => {
+  let storeDir: string;
+  let homeDir: string;
+
+  beforeEach(() => {
+    storeDir = mkdtempSync(join(tmpdir(), 'skill-sync-apply-'));
+    homeDir = mkdtempSync(join(tmpdir(), 'skill-sync-home-'));
+  });
+
+  afterEach(() => {
+    rmSync(storeDir, { recursive: true, force: true });
+    rmSync(homeDir, { recursive: true, force: true });
+  });
+
+  it('suggests scan when source of truth does not exist', () => {
+    const result = runApply(join(storeDir, 'nonexistent'), homeDir, { dryRun: false, force: true });
+
+    expect(result.output).toContain('scan');
+    expect(result.exitCode).toBe(1);
+  });
+
+  it('reports up to date when no differences exist', () => {
+    mkdirSync(join(homeDir, '.claude'), { recursive: true });
+    writeFileSync(join(homeDir, '.claude', 'CLAUDE.md'), 'Same.');
+    mkdirSync(join(homeDir, '.codex'), { recursive: true });
+    writeFileSync(join(homeDir, '.codex', 'AGENTS.md'), 'Same.');
+
+    const store = new SourceStore(storeDir);
+    store.write({
+      instructions: 'Same.',
+      mcpServers: [], plugins: [], hooks: [], rules: [],
+    });
+
+    const result = runApply(storeDir, homeDir, { dryRun: false, force: true });
+
+    expect(result.output).toContain('up to date');
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('dry-run shows planned actions without writing', () => {
+    mkdirSync(join(homeDir, '.claude'), { recursive: true });
+    writeFileSync(join(homeDir, '.claude', 'CLAUDE.md'), 'Old.');
+
+    const store = new SourceStore(storeDir);
+    store.write({
+      instructions: 'New.',
+      mcpServers: [], plugins: [], hooks: [], rules: [],
+    });
+
+    const result = runApply(storeDir, homeDir, { dryRun: true, force: false });
+
+    expect(result.output).toContain('Dry run');
+    expect(result.output).toContain('Would');
+    expect(readFileSync(join(homeDir, '.claude', 'CLAUDE.md'), 'utf-8')).toBe('Old.');
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('force apply writes files and shows summary', () => {
+    mkdirSync(join(homeDir, '.claude'), { recursive: true });
+    writeFileSync(join(homeDir, '.claude', 'CLAUDE.md'), 'Old.');
+
+    const store = new SourceStore(storeDir);
+    store.write({
+      instructions: 'New.',
+      mcpServers: [
+        { name: 'my-server', description: '', install: 'npx', requires_secret: true, source_tool: 'claude', sync: true },
+      ],
+      plugins: [], hooks: [], rules: [],
+    });
+
+    const result = runApply(storeDir, homeDir, { dryRun: false, force: true });
+
+    expect(readFileSync(join(homeDir, '.claude', 'CLAUDE.md'), 'utf-8')).toBe('New.');
+    expect(result.output).toContain('Written');
+    expect(result.output).toContain('Backup');
+    expect(result.output).toContain('my-server');
+    expect(result.output).toContain('requires secret');
+    expect(result.exitCode).toBe(0);
   });
 });
