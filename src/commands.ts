@@ -68,7 +68,7 @@ export function runDiff(basePath: string, homePath: string): { output: string; h
   for (const d of result.instructions) {
     if (d.status === 'identical' || d.status === 'source_missing') continue;
     lines.push(`[${d.tool}] instructions: ${d.status}`);
-    if (d.patch) lines.push(d.patch);
+    if (d.patch) lines.push(colorizePatch(d.patch));
   }
 
   const categories = [
@@ -90,7 +90,13 @@ export function runDiff(basePath: string, homePath: string): { output: string; h
   return { output: lines.join('\n'), hasDifferences: true };
 }
 
-export function runApply(basePath: string, homePath: string, opts: ApplyOptions): { output: string; exitCode: number } {
+export interface RunApplyResult {
+  output: string;
+  exitCode: number;
+  needsConfirmation?: boolean;
+}
+
+export function runApply(basePath: string, homePath: string, opts: ApplyOptions): RunApplyResult {
   if (!existsSync(join(basePath, 'instructions'))) {
     return { output: 'Source of truth not found. Run `skill-sync scan` first.', exitCode: 1 };
   }
@@ -110,6 +116,18 @@ export function runApply(basePath: string, homePath: string, opts: ApplyOptions)
     return { output: 'Everything is up to date.', exitCode: 0 };
   }
 
+  if (!opts.force && !opts.dryRun) {
+    const preview = apply(source, diffResult, homePath, basePath, { dryRun: true, force: false });
+    const lines: string[] = [];
+    for (const p of preview.planned) lines.push(`  Would: ${p}`);
+    for (const w of preview.warnings) lines.push(`Warning: ${w}`);
+    if (preview.manualSetup.length > 0) {
+      lines.push('Manual setup needed:');
+      for (const m of preview.manualSetup) lines.push(`  - ${m}`);
+    }
+    return { output: lines.join('\n'), exitCode: 0, needsConfirmation: true };
+  }
+
   const result = apply(source, diffResult, homePath, basePath, opts);
 
   const lines: string[] = [];
@@ -127,6 +145,19 @@ export function runApply(basePath: string, homePath: string, opts: ApplyOptions)
   }
 
   return { output: lines.join('\n'), exitCode: 0 };
+}
+
+function colorizePatch(patch: string): string {
+  const reset = '\x1b[0m';
+  const green = '\x1b[32m';
+  const red = '\x1b[31m';
+  const cyan = '\x1b[36m';
+  return patch.split('\n').map(line => {
+    if (line.startsWith('+') && !line.startsWith('+++')) return `${green}${line}${reset}`;
+    if (line.startsWith('-') && !line.startsWith('---')) return `${red}${line}${reset}`;
+    if (line.startsWith('@@')) return `${cyan}${line}${reset}`;
+    return line;
+  }).join('\n');
 }
 
 function mergeByName<T extends { name: string }>(existing: T[], scanned: T[]): T[] {

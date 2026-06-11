@@ -122,7 +122,7 @@ describe('runDiff', () => {
     expect(result.output).toContain('No differences found');
   });
 
-  it('shows instruction diff when content differs', () => {
+  it('shows instruction diff with color codes when content differs', () => {
     mkdirSync(join(homeDir, '.claude'), { recursive: true });
     writeFileSync(join(homeDir, '.claude', 'CLAUDE.md'), 'Old content.');
 
@@ -137,6 +137,8 @@ describe('runDiff', () => {
     expect(result.hasDifferences).toBe(true);
     expect(result.output).toContain('claude');
     expect(result.output).toContain('modified');
+    expect(result.output).toContain('\x1b[32m');
+    expect(result.output).toContain('\x1b[31m');
   });
 
   it('shows inventory differences', () => {
@@ -241,5 +243,22 @@ describe('runApply', () => {
     expect(result.output).toContain('my-server');
     expect(result.output).toContain('requires secret');
     expect(result.exitCode).toBe(0);
+  });
+
+  it('default mode returns needsConfirmation without writing', () => {
+    mkdirSync(join(homeDir, '.claude'), { recursive: true });
+    writeFileSync(join(homeDir, '.claude', 'CLAUDE.md'), 'Old.');
+
+    const store = new SourceStore(storeDir);
+    store.write({
+      instructions: 'New.',
+      mcpServers: [], plugins: [], hooks: [], rules: [],
+    });
+
+    const result = runApply(storeDir, homeDir, { dryRun: false, force: false });
+
+    expect(result.needsConfirmation).toBe(true);
+    expect(result.output).toContain('Would');
+    expect(readFileSync(join(homeDir, '.claude', 'CLAUDE.md'), 'utf-8')).toBe('Old.');
   });
 });

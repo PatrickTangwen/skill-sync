@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline';
 import { runInit, runScan, runDiff, runApply } from './commands.js';
 
 const DEFAULT_BASE = join(homedir(), '.config', 'skill-sync');
@@ -44,13 +45,35 @@ program
   .description('Apply source of truth to current machine')
   .option('--force', 'Skip interactive confirmation')
   .option('--dry-run', 'Preview changes without writing to disk')
-  .action((options) => {
-    const { output, exitCode } = runApply(DEFAULT_BASE, homedir(), {
+  .action(async (options) => {
+    const result = runApply(DEFAULT_BASE, homedir(), {
       dryRun: options.dryRun || false,
       force: options.force || false,
     });
-    console.log(output);
-    process.exitCode = exitCode;
+    console.log(result.output);
+
+    if (result.needsConfirmation) {
+      const answer = await ask('Apply these changes? (y/N) ');
+      if (answer.toLowerCase() === 'y') {
+        const confirmed = runApply(DEFAULT_BASE, homedir(), { dryRun: false, force: true });
+        console.log(confirmed.output);
+        process.exitCode = confirmed.exitCode;
+      } else {
+        console.log('Aborted.');
+      }
+    } else {
+      process.exitCode = result.exitCode;
+    }
   });
+
+function ask(prompt: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise(resolve => {
+    rl.question(prompt, answer => {
+      rl.close();
+      resolve(answer);
+    });
+  });
+}
 
 program.parse();
